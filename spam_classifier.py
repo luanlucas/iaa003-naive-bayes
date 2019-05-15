@@ -16,13 +16,22 @@ def count_words(training_set):
             counts[word][0 if is_spam else 1] += 1
     return counts
 
-def word_probabilities(counts, total_spams, total_non_spams, k=0.5):
+# def min_count(training_set, min_threshold=10):
+#     counts = defaultdict(lambda: [0, 0])
+#     for message, is_spam in training_set:
+#         for word in tokenize(message):
+#             counts[word][0 if is_spam else 1] += 1
+#
+#     counter = Counter(counts)
+#     return {word : counter[word] for word in counter if counter[word][0] + counter[word][1] >= min_threshold }
+
+def word_probabilities(counts, total_spams, total_non_spams, k=0.5, min_threshold=8):
     """turn the word_counts into a list of triplets
     w, p(w | spam) and p(w | ~spam)"""
     return [(w,
              (spam + k) / (total_spams + 2 * k),
              (non_spam + k) / (total_non_spams + 2 * k))
-             for w, (spam, non_spam) in counts.items()]
+             for w, (spam, non_spam) in counts.items() if spam >= min_threshold]
 
 def spam_probability(word_probs, message):
     message_words = tokenize(message)
@@ -49,8 +58,9 @@ def spam_probability(word_probs, message):
 
 class NaiveBayesClassifier:
 
-    def __init__(self, k=0.5):
+    def __init__(self, k=0.5, min_threshold=8):
         self.k = k
+        self.min_threshold = min_threshold
         self.word_probs = []
 
     def train(self, training_set):
@@ -66,7 +76,8 @@ class NaiveBayesClassifier:
         self.word_probs = word_probabilities(word_counts,
                                              num_spams,
                                              num_non_spams,
-                                             self.k)
+                                             self.k,
+                                             self.min_threshold)
 
     def classify(self, message):
         return spam_probability(self.word_probs, message)
